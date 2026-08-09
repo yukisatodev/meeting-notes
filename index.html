@@ -18,7 +18,7 @@
     font-size: 22px;
     margin-bottom: 30px;
   }
-  #recordBtn, #summarizeBtn {
+  #recordBtn, #summarizeBtn, #loadHistoryBtn {
     padding: 16px 32px;
     font-size: 16px;
     border: none;
@@ -27,7 +27,7 @@
     color: #1a1a1a;
     cursor: pointer;
   }
-  #summarizeBtn {
+  #summarizeBtn, #loadHistoryBtn {
     margin-top: 20px;
   }
   #transcript {
@@ -52,6 +52,30 @@
     margin-bottom: 8px;
     color: #d1a355;
   }
+  #history {
+    margin-top: 20px;
+    width: 100%;
+    max-width: 500px;
+  }
+  .history-item {
+    background: #262626;
+    border: 1px solid #444;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 12px;
+  }
+  .history-item .date {
+    font-size: 12px;
+    color: #999;
+    margin-bottom: 8px;
+  }
+  .history-item .summary {
+    margin-bottom: 8px;
+  }
+  .history-item ul {
+    margin: 0;
+    padding-left: 20px;
+  }
 </style>
 </head>
 <body>
@@ -66,11 +90,17 @@
 
   <div id="result"></div>
 
+  <button id="loadHistoryBtn">過去の議事録を見る</button>
+
+  <div id="history"></div>
+
 <script>
     const recordBtn = document.getElementById('recordBtn');
     const transcriptDiv = document.getElementById('transcript');
     const summarizeBtn = document.getElementById('summarizeBtn');
     const resultDiv = document.getElementById('result');
+    const loadHistoryBtn = document.getElementById('loadHistoryBtn');
+    const historyDiv = document.getElementById('history');
 
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
@@ -138,6 +168,30 @@
         `;
       } catch (err) {
         resultDiv.textContent = 'エラーが発生しました: ' + err.message;
+      }
+    });
+
+    loadHistoryBtn.addEventListener('click', async () => {
+      historyDiv.textContent = '読み込み中...';
+
+      try {
+        const res = await fetch('http://localhost:3000/meetings');
+        const meetings = await res.json();
+
+        if (meetings.length === 0) {
+          historyDiv.textContent = 'まだ議事録が保存されていません。';
+          return;
+        }
+
+        historyDiv.innerHTML = meetings.map(m => `
+          <div class="history-item">
+            <div class="date">${m.created_at}</div>
+            <div class="summary">${m.summary}</div>
+            <ul>${m.todos.map(t => `<li>${t}</li>`).join('')}</ul>
+          </div>
+        `).join('');
+      } catch (err) {
+        historyDiv.textContent = 'エラーが発生しました: ' + err.message;
       }
     });
   </script>
