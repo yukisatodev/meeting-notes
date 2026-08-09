@@ -3,96 +3,197 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>議事録ツール</title>
+<title>AI議事録・タスク抽出ツール</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans+JP:wght@400;500;700&family=Zen+Old+Mincho:wght@600;700&display=swap" rel="stylesheet">
+
 <style>
+  :root {
+    --ink: #0c1826;
+    --ink-line: #29496b;
+    --ink-line-soft: #16283c;
+    --blue: #6fa3cf;
+    --gold: #d1a355;
+    --gold-dim: #8a6f3f;
+    --text-light: #eae5d6;
+    --text-dim: #86a0ba;
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'IBM Plex Sans JP', sans-serif;
+    --serif: 'Zen Old Mincho', serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
   body {
-    font-family: sans-serif;
-    background: #1a1a1a;
-    color: #eee;
+    background: var(--ink);
+    color: var(--text-light);
+    font-family: var(--sans);
+    line-height: 1.75;
+    min-height: 100vh;
+    background-image:
+      linear-gradient(var(--ink-line-soft) 1px, transparent 1px),
+      linear-gradient(90deg, var(--ink-line-soft) 1px, transparent 1px);
+    background-size: 44px 44px;
+  }
+
+  .wrap {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 64px 24px 96px;
+  }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    color: var(--blue);
+    text-transform: uppercase;
     display: flex;
-    flex-direction: column;
     align-items: center;
-    padding: 60px 20px;
+    gap: 10px;
   }
+  .eyebrow::before { content: ''; width: 22px; height: 1px; background: var(--blue); }
+
   h1 {
-    font-size: 22px;
-    margin-bottom: 30px;
+    font-family: var(--serif);
+    font-weight: 700;
+    font-size: clamp(24px, 4.4vw, 32px);
+    margin: 16px 0 40px;
+    color: var(--text-light);
   }
-  #recordBtn, #summarizeBtn, #loadHistoryBtn {
-    padding: 16px 32px;
-    font-size: 16px;
-    border: none;
-    border-radius: 8px;
-    background: #d1a355;
-    color: #1a1a1a;
+
+  .panel {
+    border: 1px solid var(--ink-line);
+    background: rgba(234, 230, 218, 0.02);
+    padding: 24px;
+    margin-bottom: 20px;
+  }
+
+  .panel-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+
+  button {
+    font-family: var(--mono);
+    font-size: 13px;
+    letter-spacing: 0.04em;
+    padding: 13px 26px;
+    border: 1px solid var(--gold-dim);
+    background: transparent;
+    color: var(--gold);
     cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease;
   }
-  #summarizeBtn, #loadHistoryBtn {
-    margin-top: 20px;
+  button:hover { background: var(--gold); color: var(--ink); }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+  button:disabled:hover { background: transparent; color: var(--gold); }
+
+  #recordBtn.recording {
+    background: var(--gold);
+    color: var(--ink);
   }
+
   #transcript {
-    margin-top: 30px;
-    width: 100%;
-    max-width: 500px;
-    min-height: 150px;
-    background: #262626;
-    border: 1px solid #444;
-    border-radius: 8px;
-    padding: 16px;
+    margin-top: 18px;
+    min-height: 110px;
+    background: rgba(0,0,0,0.2);
+    border: 1px solid var(--ink-line);
+    padding: 14px;
     white-space: pre-wrap;
+    font-size: 14px;
+    color: var(--text-dim);
   }
+
   #result {
-    margin-top: 20px;
-    width: 100%;
-    max-width: 500px;
-    white-space: pre-wrap;
+    margin-top: 18px;
+    font-size: 14px;
   }
   #result h3 {
-    margin-top: 16px;
-    margin-bottom: 8px;
-    color: #d1a355;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin: 16px 0 8px;
   }
+  #result h3:first-child { margin-top: 0; }
+  #result p { color: var(--text-dim); }
+  #result ul { padding-left: 18px; color: var(--text-dim); }
+  #result li { margin-bottom: 4px; }
+
   #history {
-    margin-top: 20px;
-    width: 100%;
-    max-width: 500px;
+    margin-top: 18px;
   }
   .history-item {
-    background: #262626;
-    border: 1px solid #444;
-    border-radius: 8px;
+    border: 1px solid var(--ink-line);
     padding: 16px;
     margin-bottom: 12px;
   }
   .history-item .date {
-    font-size: 12px;
-    color: #999;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--blue);
     margin-bottom: 8px;
   }
   .history-item .summary {
+    font-size: 14px;
+    color: var(--text-light);
     margin-bottom: 8px;
   }
   .history-item ul {
     margin: 0;
-    padding-left: 20px;
+    padding-left: 18px;
+    font-size: 13px;
+    color: var(--text-dim);
   }
+
+  .back-link {
+    display: inline-block;
+    margin-top: 48px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text-dim);
+    text-decoration: none;
+    border-bottom: 1px solid var(--ink-line);
+    padding-bottom: 2px;
+  }
+  .back-link:hover { color: var(--gold); border-color: var(--gold-dim); }
 </style>
 </head>
 <body>
 
-  <h1>議事録・タスク抽出ツール</h1>
+<div class="wrap">
 
-  <button id="recordBtn">録音開始</button>
+  <div class="eyebrow">In Progress / Portfolio</div>
+  <h1>AI議事録・タスク抽出ツール</h1>
 
-  <div id="transcript">ここに文字起こしが表示されます</div>
+  <div class="panel">
+    <div class="panel-label">01 — Recording</div>
+    <button id="recordBtn">録音開始</button>
+    <div id="transcript">ここに文字起こしが表示されます</div>
+  </div>
 
-  <button id="summarizeBtn">要約・タスク抽出</button>
+  <div class="panel">
+    <div class="panel-label">02 — Summary</div>
+    <button id="summarizeBtn">要約・タスク抽出</button>
+    <div id="result"></div>
+  </div>
 
-  <div id="result"></div>
+  <div class="panel">
+    <div class="panel-label">03 — History</div>
+    <button id="loadHistoryBtn">過去の議事録を見る</button>
+    <div id="history"></div>
+  </div>
 
-  <button id="loadHistoryBtn">過去の議事録を見る</button>
+  <a class="back-link" href="https://yukisatodev.github.io/">← Yuki Sato</a>
 
-  <div id="history"></div>
+</div>
 
 <script>
     const recordBtn = document.getElementById('recordBtn');
@@ -121,10 +222,12 @@
           finalTranscript = transcriptDiv.textContent === 'ここに文字起こしが表示されます' ? '' : transcriptDiv.textContent;
           recognition.start();
           recordBtn.textContent = '停止';
+          recordBtn.classList.add('recording');
           isRecording = true;
         } else {
           recognition.stop();
           recordBtn.textContent = '録音開始';
+          recordBtn.classList.remove('recording');
           isRecording = false;
         }
       });
