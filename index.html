@@ -47,6 +47,54 @@
   <button id="recordBtn">録音開始</button>
 
   <div id="transcript">ここに文字起こしが表示されます</div>
+<script>
+    const recordBtn = document.getElementById('recordBtn');
+    const transcriptDiv = document.getElementById('transcript');
 
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      transcriptDiv.textContent = 'このブラウザは音声認識に対応していません。Google Chromeでお試しください。';
+      recordBtn.disabled = true;
+    } else {
+      const recognition = new SpeechRecognition();
+      recognition.lang = 'ja-JP';
+      recognition.continuous = true;
+      recognition.interimResults = true;
+
+      let isRecording = false;
+      let finalTranscript = '';
+
+      recordBtn.addEventListener('click', () => {
+        if (!isRecording) {
+          finalTranscript = transcriptDiv.textContent === 'ここに文字起こしが表示されます' ? '' : transcriptDiv.textContent;
+          recognition.start();
+          recordBtn.textContent = '停止';
+          isRecording = true;
+        } else {
+          recognition.stop();
+          recordBtn.textContent = '録音開始';
+          isRecording = false;
+        }
+      });
+
+      recognition.onresult = (event) => {
+        let interimTranscript = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const transcript = event.results[i][0].transcript;
+          if (event.results[i].isFinal) {
+            finalTranscript += transcript + '\n';
+          } else {
+            interimTranscript += transcript;
+          }
+        }
+        transcriptDiv.textContent = finalTranscript + interimTranscript;
+      };
+
+      recognition.onerror = (event) => {
+        console.error('音声認識エラー:', event.error);
+      };
+    }
+  </script>
 </body>
 </html>
