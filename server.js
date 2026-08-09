@@ -1,9 +1,23 @@
 const express = require('express');
 const cors = require('cors');
+const Database = require('better-sqlite3');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+const db = new Database('meetings.db');
+
+// 議事録を保存するテーブルを作成(すでにあれば何もしない)
+db.exec(`
+  CREATE TABLE IF NOT EXISTS meetings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    transcript TEXT NOT NULL,
+    summary TEXT NOT NULL,
+    todos TEXT NOT NULL,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+  )
+`);
 
 // フロントエンド(index.html)から文字起こしテキストを受け取り、
 // Ollamaに要約・タスク抽出をリクエストするエンドポイント
@@ -38,11 +52,27 @@ ${transcript}`;
     });
 
     const data = await ollamaRes.json();
+    const parsed = JSON.parse(data.response);
+
+    // データベースに保存
+    const stmt = db.prepare('INSERT INTO meetings (transcript, summary, todos) VALUES (?, ?, ?)');
+    stmt.run(transcript, parsed.summary, JSON.stringify(parsed.todos));
+
     res.json({ raw: data.response });
   } catch (err) {
     console.error('Ollama連携エラー:', err);
     res.status(500).json({ error: 'Ollamaとの通信に失敗しました' });
   }
+});
+
+// 保存済みの議事録一覧を取得するエンドポイント
+app.get('/meetings', (req, res) => {
+  const rows = db.prepare('SELECT * FROM meetings ORDER BY created_at DESC').all();
+  const meetings = rows.map(row => ({
+    ...row,
+    todos: JSON.parse(row.todos)
+  }));
+  res.json(meetings);
 });
 
 const PORT = 3000;
