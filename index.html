@@ -18,7 +18,7 @@
     font-size: 22px;
     margin-bottom: 30px;
   }
-  #recordBtn {
+  #recordBtn, #summarizeBtn {
     padding: 16px 32px;
     font-size: 16px;
     border: none;
@@ -26,6 +26,9 @@
     background: #d1a355;
     color: #1a1a1a;
     cursor: pointer;
+  }
+  #summarizeBtn {
+    margin-top: 20px;
   }
   #transcript {
     margin-top: 30px;
@@ -38,6 +41,17 @@
     padding: 16px;
     white-space: pre-wrap;
   }
+  #result {
+    margin-top: 20px;
+    width: 100%;
+    max-width: 500px;
+    white-space: pre-wrap;
+  }
+  #result h3 {
+    margin-top: 16px;
+    margin-bottom: 8px;
+    color: #d1a355;
+  }
 </style>
 </head>
 <body>
@@ -47,9 +61,16 @@
   <button id="recordBtn">録音開始</button>
 
   <div id="transcript">ここに文字起こしが表示されます</div>
+
+  <button id="summarizeBtn">要約・タスク抽出</button>
+
+  <div id="result"></div>
+
 <script>
     const recordBtn = document.getElementById('recordBtn');
     const transcriptDiv = document.getElementById('transcript');
+    const summarizeBtn = document.getElementById('summarizeBtn');
+    const resultDiv = document.getElementById('result');
 
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
@@ -95,6 +116,30 @@
         console.error('音声認識エラー:', event.error);
       };
     }
+
+    summarizeBtn.addEventListener('click', async () => {
+      const transcript = transcriptDiv.textContent;
+      resultDiv.textContent = '要約中...(少し時間がかかります)';
+
+      try {
+        const res = await fetch('http://localhost:3000/summarize', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ transcript })
+        });
+        const data = await res.json();
+        const parsed = JSON.parse(data.raw);
+
+        resultDiv.innerHTML = `
+          <h3>要約</h3>
+          <p>${parsed.summary}</p>
+          <h3>タスク</h3>
+          <ul>${parsed.todos.map(t => `<li>${t}</li>`).join('')}</ul>
+        `;
+      } catch (err) {
+        resultDiv.textContent = 'エラーが発生しました: ' + err.message;
+      }
+    });
   </script>
 </body>
 </html>
